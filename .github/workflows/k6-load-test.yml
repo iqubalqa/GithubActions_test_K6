@@ -1,3 +1,4 @@
+
 name: k6 Performance Test
 
 on:
@@ -7,31 +8,49 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   k6-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Check project files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Project files:"
+          ls -la
+          echo "Test files:"
+          ls -la tests/
 
       - name: Prepare reports folder
         run: mkdir -p reports
 
+      - name: Check Docker
+        run: docker --version
+
+      - name: Pull k6 image
+        run: docker pull grafana/k6:1.5.0
+
       - name: Run k6 load test
         run: |
           docker run --rm \
-            -v "${{ github.workspace }}:/work" \
+            -v "$GITHUB_WORKSPACE:/work" \
             -w /work \
-            grafana/k6:latest \
-            run --summary-export=reports/summary.json \
+            grafana/k6:1.5.0 \
+            run --summary-export=/work/reports/summary.json \
             tests/api-load-test.js
 
       - name: Upload k6 report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: k6-performance-report
           path: reports/
-          if-no-files-found: ignore
+          if-no-files-found: warn
           retention-days: 14
