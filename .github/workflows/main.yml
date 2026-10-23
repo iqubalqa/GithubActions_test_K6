@@ -1,0 +1,37 @@
+name: k6 Performance Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  k6-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare reports folder
+        run: mkdir -p reports
+
+      - name: Run k6 load test
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            grafana/k6:latest \
+            run --summary-export=reports/summary.json \
+            tests/api-load-test.js
+
+      - name: Upload k6 report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-performance-report
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 14
